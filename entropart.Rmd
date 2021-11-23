@@ -1,0 +1,90 @@
+---
+title: "entropart tutorial"
+output: html_notebook
+---
+
+Camillo lab discussion.
+
+## [entropart: An R Package to Measure and Partition Diversity](https://doi.org/10.18637/jss.v067.i088)
+
+entropart is a package for R designed to estimate diversity based on HCDT entropy or similarity-based entropy. It allows calculating species-neutral, phylogenetic and functional entropy and diversity, partitioning them and correcting them for estimation bias.
+
+```{r}
+#install.packages("entropart")
+library(entropart)
+```
+
+
+```{r}
+(df <- data.frame(C1 = c(10, 10, 10, 10), C2 = c(0, 20, 35, 5), C3 = c(25, 15, 0, 2), row.names = c("sp1", "sp2", "sp3", "sp4")))
+
+colSums(df) #total abundance in each community
+rowSums(df) #abundance of each species in total across communities
+sum(df) #total number of individuals
+```
+
+```{r}
+w <- c(1,2,1) #Community weight to account for (e.g.) differences in effort, study sites, etc.
+MC <- MetaCommunity(Abundances = df, Weights = w) #
+```
+
+Big help vs other community packages is that the first column can contain the species names (vs just matrix with rownames)
+
+```{r}
+MC
+str(MC)
+MC$Ps #probability of occurrence of each species in the meta-community
+MC$Psi
+```
+
+
+```{r}
+plot(MC)
+```
+
+```{r}
+data("Paracou618")
+summary(Paracou618.MC)
+```
+
+# It can also do phylogenetic and functional diversity
+```{r}
+Tsallis(Ps = Paracou618.MC$Ps, q = 1)  # Order 1 is the weighted geometric mean (see above), also HCDT
+Shannon(Ps = Paracou618.MC$Ps)  # Notice that is the same!
+```
+
+
+# Sample coverage - probability for a species of the community to be observed in the actual sample.
+Coverage(Ns = Paracou618.MC$Ns)
+
+# Bias-corrected estimators - improve the estimation of entropy despite unobserved species
+bcTsallis(Ns = Paracou618.MC$Ns, q = 1)
+
+# Bias-corrected Shannon - This one is the one we should use!
+bcShannon(Ns = Paracou618.MC$Ns)
+
+# Effective numbers of species - Entropy converted into “true diversity” via Hill's numbers
+expq(Simpson(Ps = Paracou618.MC$Ps), q = 2)
+Diversity(Ps = Paracou618.MC$Ps, q = 2)
+
+# Effective species number with bias correction
+bcDiversity(Ns = Paracou618.MC$Ns, q = 2)
+
+# Meta-community functions
+# Alpha entropy
+e <- AlphaEntropy(Paracou618.MC, q = 1)
+summary(e)
+
+
+# Diversity partitioning among alpha, beta and gamma diversity
+p <- DivPart(q = 1, MC = Paracou618.MC, Biased = FALSE)
+summary(p)
+
+#  Diversity estimates for each component
+de <- DivEst(q = 1, Paracou618.MC, Biased = FALSE, Correction = "Best", Simulations = 1000)
+summary(de)
+plot(de)
+#  Diversity profile
+dp <- DivProfile(seq(0, 2, 0.2), Paracou618.MC, Biased = FALSE)
+summary(dp)
+plot(dp)
